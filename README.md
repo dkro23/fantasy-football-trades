@@ -8,9 +8,17 @@ Why do players make trades in fantasy football? A prominent literature in behavi
 
 Data is scraped from Sleeper, a popular fantasy football platform, for a sample of leagues. The script `etl_sample_data.R` extracts the data from Sleeper, transforms it into a series of clean data sets, and loads it into clean CSV files.
 
-### Analysis 
+### Analysis
 
-TBD
+```{r fig.asp = 0.8, fig.width = 7, out.width = "100%}
+p1
+```
+
+Another plot
+
+```         
+p2
+```
 
 ### Questions or Comments?
 

@@ -17,6 +17,8 @@ library(lubridate)
 library(stringr)
 
 library(ffscrapr)
+library(rdrobust)
+library(lfe)
 
 ##########################################################
 ### Load data
@@ -91,8 +93,36 @@ dat_reg <- dat %>%
 ## Visualization
 #############
 
+### All Leagues
 dat_reg %>%
   filter(abs(points_margin) < 15) %>%
+  ggplot(aes(points_margin,trade_indicator,color = result)) +
+  geom_point() +
+  geom_smooth(method="lm") +
+  xlab("Margin of Victory/Defeat") + ylab("Completed Trade Following Week?")
+
+### All Leagues with bins
+dat_reg %>%
+  filter(abs(points_margin) < 15) %>%
+  ggplot(aes(points_margin,trade_indicator,color = result)) +
+  geom_point(data = dat_reg %>%
+               filter(abs(points_margin) < 15) %>%
+               mutate(points_margin = round(points_margin,0)) %>%
+               group_by(points_margin) %>%
+               summarise(trade_indicator = mean(trade_indicator),
+                         count = n()),
+             aes(x = points_margin, y=trade_indicator, size=count), alpha=.2, inherit.aes=F
+             ) +
+  geom_smooth(method="lm") +
+  geom_vline(xintercept=0, linetype="dashed", alpha=.7) +
+  theme_classic() +
+  xlab("Margin of Victory/Defeat") + ylab("") +
+  ggtitle("Completed Trade Following Week?")
+
+### Dynasty only
+dat_reg %>%
+  filter(abs(points_margin) < 15,
+         league_type == "dynasty") %>%
   ggplot(aes(points_margin,trade_indicator,color = result)) +
   geom_point() +
   geom_smooth(method="lm") +
@@ -101,13 +131,34 @@ dat_reg %>%
 #############
 ## Regression
 #############
-m1 <- lm(
-  trade_indicator ~ points_margin + 
-    I(points_margin < 0) + I(points_margin < 0)*points_margin +
-    franchise_score,
-  data = dat_reg
+
+### Finding Optimal Bandwidth
+bw <- rdbwselect(y = dat_reg$trade_indicator,x = dat_reg$points_margin, c = 0, p = 1, bwselect = "mserd")
+
+### Preparing for estimation
+dat_reg <- dat_reg %>%
+  mutate(
+    bandwidth = bw$bws[1],
+    kw = 1-(abs(0 - points_margin))/bandwidth,
+    kw = ifelse(abs(points_margin) > bandwidth, 0, kw)
+  )
+
+### Estimation
+m1 <- felm(
+  trade_indicator ~ points_margin + I(points_margin > 0) + I(points_margin > 0)*points_margin +
+    franchise_score | league_id + week | 0 | franchise_id,
+  weights = subset(dat_reg,dat_reg$kw > 0)$kw,
+  data = subset(dat_reg,dat_reg$kw > 0)
 )
 summary(m1)
+
+m2 <- felm(
+  trade_indicator ~ points_margin + I(points_margin > 0) + I(points_margin > 0)*points_margin +
+    franchise_score | league_id + week | 0 | franchise_id,
+  weights = dat_reg$kw,
+  data = dat_reg
+)
+summary(m2)
 
 
 
