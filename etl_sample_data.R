@@ -56,7 +56,7 @@ league_dat <- league_dat[!duplicated(league_dat)]
 
 
 ##########################################################
-### Getting league summary, team transaction, and schedule data 
+### Getting league summary, teams, team transaction, and schedule data 
 ##########################################################
 
 ######################
@@ -82,6 +82,28 @@ summary_dat <- league_summary(leagues = league_dat)
 
 x <- league_summary(leagues = league_dat,year = 2010)
 
+######################
+## Teams
+######################
+
+### Define Function
+league_teams <- function(leagues,year = 2022){
+  
+  dat_list <- list()
+  
+  for (i in c(1:NROW(leagues))){
+    league <- sleeper_connect(season = year, league_id = leagues[i])
+    franchises <- ff_franchises(league)
+    dat_list[[i]] <- franchises
+  }
+  
+  dat <- rbindlist(dat_list, fill = TRUE)
+  return({dat %>% select(-co_owners)})  
+}
+
+### Run Function
+teams_dat <- league_teams(leagues = league_dat)
+
 
 ######################
 ## Transactions
@@ -104,7 +126,7 @@ league_transactions <- function(leagues,year = 2022){
   
   dat <- rbindlist(dat_list, fill = TRUE)
 
-  return(dat)  
+  return(dat)
 }
 
 ### Run Function
@@ -144,6 +166,9 @@ schedule_dat <- league_schedule(leagues = league_dat)
 
 ### League summary
 write.csv(summary_dat,"summary_dat.csv",row.names = F)
+
+### Teams
+write.csv(teams_dat,"teams_dat.csv",row.names = F)
 
 ### Transactions
 write.csv(transactions_dat,"transactions_dat.csv",row.names = F)

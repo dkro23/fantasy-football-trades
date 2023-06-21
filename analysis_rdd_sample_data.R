@@ -27,6 +27,9 @@ library(lfe)
 ### League summary
 summary_dat <- fread("summary_dat.csv")
 
+### Teams
+teams_dat <- fread("teams_dat.csv")
+
 ### Transactions
 transactions_dat <- fread("transactions_dat.csv")
 

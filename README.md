@@ -16,8 +16,8 @@ Data is scraped from Sleeper, a popular fantasy football platform, for a
 sample of 42 leagues in 2022. The script `etl_sample_data.R` extracts
 the data from Sleeper, transforms it into a series of clean data sets,
 and loads it into clean CSV files including data on schedules
-`schedule_dat.csv`, league summaries `summary_dat.csv`, and transactions
-(incuding trades) `transactions_dat.csv`.
+`schedule_dat.csv`, teams in each league `teams_dat.csv`, league summaries `summary_dat.csv`, and transactions
+(including trades, but also waiver claims) `transactions_dat.csv`.
 
 ### Analysis of Sample Data
 
@@ -26,7 +26,7 @@ compared to close wins, I use a regression discontinuity design to
 leverage the as-if random assignment of result status (win/loss) on
 whether a player completes a trade on the following week. I reduce my
 analysis to just games during the first 8 weeks of season as leagues may
-instead
+have trade deadlines that after week 8, which would prevent trades from occurring and thus adding noise to the analysis. Analysis can be found in `analysis_rdd_sample_data.R`.
 
 First, the plots below suggest that a relationship may exist, but that
 some caution should be used when moving to the regression analysis. In
