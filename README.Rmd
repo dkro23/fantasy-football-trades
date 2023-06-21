@@ -6,7 +6,6 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-
 ```{r, file='analysis_rdd_sample_data.R',include=FALSE}
 ```
 
@@ -18,19 +17,63 @@ Why do players make trades in fantasy football? A prominent literature in behavi
 
 ### Data
 
-Data is scraped from Sleeper, a popular fantasy football platform, for a sample of leagues. The script `etl_sample_data.R` extracts the data from Sleeper, transforms it into a series of clean data sets, and loads it into clean CSV files.
+Data is scraped from Sleeper, a popular fantasy football platform, for a sample of `r nrow(summary_dat)` leagues in 2022. The script `etl_sample_data.R` extracts the data from Sleeper, transforms it into a series of clean data sets, and loads it into clean CSV files including data on schedules `schedule_dat.csv`, league summaries `summary_dat.csv`, and transactions (incuding trades) `transactions_dat.csv`.
 
-### Analysis
+### Analysis of Sample Data
 
-```{r}
+To understand the relative impact of close losses on trade behavior compared to close wins, I use a regression discontinuity design to leverage the as-if random assignment of result status (win/loss) on whether a player completes a trade on the following week. I reduce my analysis to just games during the first 8 weeks of season as leagues may instead
+
+First, the plots below suggest that a relationship may exist, but that some caution should be used when moving to the regression analysis. In the plot below, each point represents an outcome that was decided by less than 15 points. The y-axis takes the value of 0 if a player did not complete a trade during the following week and takes a value of 1 if so. The relationship between close wins and losses is not immediately obvious.
+
+```{r echo=FALSE}
 dat_reg %>%
-  filter(abs(points_margin) < 15) %>%
+  filter(abs(points_margin) < 15,
+         result != "T") %>%
   ggplot(aes(points_margin,trade_indicator,color = result)) +
   geom_point() +
   geom_smooth(formula = y ~ x,method="lm") +
-  xlab("Margin of Victory/Defeat") + ylab("Completed Trade Following Week?")
+  xlab("Margin of Victory/Defeat") + ylab("Trade Completed?") +
+  ggtitle("Completed Trade Following Week?") +
+  labs(caption = "Data scraped using from Sleeper API and ffscrapr package.")
 ```
 
+The plot below instead bins outcomes outcomes to the nearest whole point. Now points along the y-axis are the proportion of outcomes in that bin that completed a trade during the following week. The results are more clear than in the previous plot and suggest that a small difference between close winners and losers may exist, with close losers trading about 2pp more than close winners. But this should be interpreted with caution as the standard errors are fairly large and the difference does not appear to be statistically insignificant.
+
+```{r echo=FALSE}
+dat_reg %>%
+  filter(abs(points_margin) < 15) %>%
+  ggplot(aes(points_margin,trade_indicator,color = result)) +
+  geom_point(data = dat_reg %>%
+               filter(abs(points_margin) < 15) %>%
+               mutate(points_margin = round(points_margin,0)) %>%
+               filter(points_margin != 0) %>%
+               group_by(points_margin) %>%
+               summarise(trade_indicator = mean(trade_indicator),
+                         count = n()),
+             aes(x = points_margin, y=trade_indicator, size=count), alpha=.2, inherit.aes=F
+             ) +
+  geom_smooth(formula = y~x,method="lm") +
+  geom_vline(xintercept=0, linetype="dashed", alpha=.7) +
+  theme_classic() +
+  xlab("Margin of Victory/Defeat") + ylab("% Completed a Trade") +
+  ggtitle("Completed Trade Following Week?")
+```
+
+I next move to the regression analysis. I use the `rdrobust` package to determine the optimal bandwidth, which comes out to be `r round(bw$bws[1],2)`. I then calculate the kernel weights as proportional to the cutoff vis-a-vis the bandwidth. For the regression, I control for the team's total number of points scored, as higher scoring teams may be less likely to trade. I also include league and week number fixed effects to account for any idiosyncratic differences across different leagues (such as any personal relationships that may exist) and differences in trade behavior that may exist week to week. Finally, I cluster standard errors by team to account for team specific trade behavior. I estimate the following equation for team $i$, league $L$, and week $w$:
+
+$T_{w+1,i} = \beta_0 + \beta_1*Margin_{w,i} + \beta_2*Win_{w,i} + \beta_3*(Margin*Win)_{w,i} + \beta_4*Score_{w,i} + \gamma_L + \alpha_w$
+
+I get the following results:
+
+```{r echo=FALSE}
+summary(m1)
+```
+
+As the descriptive analysis suggested, we cannot reject the null hypothesis that close winners and losers trade at different rates during the following week. But the p-value is 0.13 and is almost statistically significant at conventional levels. Furthermore, given that players trade `r round(mean(dat_reg$trade_indicator)*100,2)` percent of the time, an increase in trade activity by 1.8pp is fairly large.
+
+### Conclusion
+
+Further data will need to gathered before we can be confident with the results. Next steps will include scraping additional data. Additional analysis to understand the *quality* of trades will also be an important next step. If my theory is correct, then not only could it suggest that people are more sensitive to relative losses (in line with existing literature), but also that they make worse decisions as a result.
 
 ### Questions or Comments?
 

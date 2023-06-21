@@ -94,7 +94,7 @@ dat_reg <- dat %>%
 #############
 
 ### All Leagues
-dat_reg %>%
+p1 <- dat_reg %>%
   filter(abs(points_margin) < 15) %>%
   ggplot(aes(points_margin,trade_indicator,color = result)) +
   geom_point() +
@@ -102,7 +102,7 @@ dat_reg %>%
   xlab("Margin of Victory/Defeat") + ylab("Completed Trade Following Week?")
 
 ### All Leagues with bins
-dat_reg %>%
+p2 <- dat_reg %>%
   filter(abs(points_margin) < 15) %>%
   ggplot(aes(points_margin,trade_indicator,color = result)) +
   geom_point(data = dat_reg %>%
