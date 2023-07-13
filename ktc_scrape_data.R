@@ -81,30 +81,75 @@ overallValue %>%
 ### Set html
 html <- read_html("https://keeptradecut.com/dynasty-rankings")
 
-### Convert to string
-html_string <- html_text(html)
-
-### Extract just the json data
-html_json <- str_extract(html_string,"var playersArray = (.*?)\\]")
-html_json <- gsub("var playersArray = ","",html_json)
-
-parsed_data <- fromJSON(json)
-
-parsed_data <- fromJSON("https://keeptradecut.com/dynasty-rankings")
-
-##############
+### Get to JSON
 js <- html %>% 
   html_element(xpath = "//script[contains(., 'playersArray')]") %>% 
   html_text()
 
-parsed_data <- js %>%
+### Parse Data
+player_links <- js %>%
   stringr::str_extract("(?<=var playersArray =)[^;]+(?=;)") %>%
-  jsonlite::parse_json(simplifyVector = T)
-  #fromJSON(js)
+  jsonlite::parse_json(simplifyVector = T) %>%
+  select(playerName,playerID,slug,positionID)
 
-substr(js,1,500)
 
 ##########################################################
 ### Scraping Rankings from Dynasty Rankings
 ##########################################################
+
+### Lists
+dat_list_1qb <- list()
+dat_list_sf <- list()
+
+### Scrape Data in Loop
+for (i in c(1:nrow(player_links))){
+  
+  ### Set html
+  html <- read_html(paste("https://keeptradecut.com/dynasty-rankings/players/",player_links$slug[i],sep=""))
+  
+  ### Get JS
+  js <- html %>% 
+    html_element(xpath = "//script[contains(., 'playerOneQB')]") %>% 
+    html_text()
+  
+  ### Get 1QB Value
+  overallValue_1qb <- js %>% 
+    stringr::str_extract("(?<=var playerOneQB =)[^;]+(?=;)") %>% 
+    jsonlite::parse_json(simplifyVector = T) %>% 
+    getElement("overallValue") %>%
+    rename(date = d, value = v)
+  
+
+  
+  ### Get SuperFlex Value
+  overallValue_sf <- js %>% 
+    stringr::str_extract("(?<=var playerSuperflex =)[^;]+(?=;)") %>% 
+    jsonlite::parse_json(simplifyVector = T) %>% 
+    getElement("overallValue") %>%
+    rename(date = d, value = v)
+  
+  ### Add in Player ID
+  overallValue_1qb$playerID <- player_links$playerID[i]
+  overallValue_sf$playerID <- player_links$playerID[i]
+  
+  ### Store Data
+  dat_list_1qb[[i]] <- overallValue_1qb
+  dat_list_sf[[i]] <- overallValue_sf
+  
+}
+
+### Combine Together
+dat_1qb <- do.call(rbind,dat_list_1qb)
+dat_sf <- do.call(rbind,dat_list_sf)
+
+
+##########################################################
+### Save Data - 07/13/2023
+##########################################################
+
+### KTC 1QB Rankings
+write.csv(dat_1qb,"ktc_1qb_daily_rankings.csv",row.names = F)
+
+### KTC SF Rankings
+write.csv(dat_sf,"ktc_sf_daily_rankings.csv",row.names = F)
 
