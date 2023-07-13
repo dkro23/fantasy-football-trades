@@ -19,6 +19,8 @@ and loads it into clean CSV files including data on schedules
 `schedule_dat.csv`, teams in each league `teams_dat.csv`, league summaries `summary_dat.csv`, and transactions
 (including trades, but also waiver claims) `transactions_dat.csv`.
 
+Update 07/13/2023: Additional data has been scraped from KeepTradeCut to include historical daily player rankings.
+
 ### Analysis of Sample Data
 
 To understand the relative impact of close losses on trade behavior
